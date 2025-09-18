@@ -1,47 +1,34 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+import User from "../models/User.js";
+import jwt from "jsonwebtoken";
 
-class AuthController {
-  static async register(req, res) {
-    try {
-      const { username, email, password } = req.body;
-      if (!username || !email || !password) return res.status(400).json({ error: 'Missing fields' });
+export const registerUser = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
 
-      const exists = await User.findOne({ $or: [{ email }, { username }] });
-      if (exists) return res.status(409).json({ error: 'Username or email already in use' });
+    const userExists = await User.findOne({ email });
+    if (userExists) return res.status(400).json({ message: "User already exists" });
 
-      const salt = await bcrypt.genSalt(10);
-      const hashed = await bcrypt.hash(password, salt);
+    const user = await User.create({ username, email, password });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
-      const user = await User.create({ username, email, password: hashed });
-      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-
-      res.status(201).json({ token, user: { id: user._id, username: user.username, email: user.email } });
-    } catch (err) {
-      console.error('Register error:', err);
-      res.status(500).json({ error: 'Server error' });
-    }
+    res.status(201).json({ token, user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
+};
 
-  static async login(req, res) {
-    try {
-      const { email, password } = req.body;
-      if (!email || !password) return res.status(400).json({ error: 'Missing fields' });
+export const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
-      const user = await User.findOne({ email });
-      if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
-      const match = await bcrypt.compare(password, user.password);
-      if (!match) return res.status(401).json({ error: 'Invalid credentials' });
-
-      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-      res.json({ token, user: { id: user._id, username: user.username, email: user.email } });
-    } catch (err) {
-      console.error('Login error:', err);
-      res.status(500).json({ error: 'Server error' });
-    }
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    res.json({ token, user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
-}
-
-module.exports = AuthController;
+};
