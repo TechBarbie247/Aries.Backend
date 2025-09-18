@@ -13,4 +13,5 @@ connectDB();
 app.use(express.json());
 
 // export app for bin/www
+
 export default app;
