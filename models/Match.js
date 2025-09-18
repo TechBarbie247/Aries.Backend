@@ -1,10 +1,10 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const MatchSchema = new mongoose.Schema({
-  users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }], 
+  users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
   createdAt: { type: Date, default: Date.now }
 });
 
 MatchSchema.index({ users: 1 }, { unique: true });
 
-module.exports = mongoose.model('Match', MatchSchema);
+export default mongoose.model('Match', MatchSchema);
