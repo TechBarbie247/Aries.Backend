@@ -1,10 +1,10 @@
 import express from "express";
-import { sendMessage, getMessagesFromMatches } from "../controllers/matchController.js";
 import { protect } from "../middleware/auth.js";
+import { sendMessage, getMessages } from "../controllers/messageController.js";
 
 const router = express.Router();
 
-router.post("/", protect, sendMessage);
-router.get("/", protect, getMessagesFromMatches);
+router.post("/:matchId", protect, sendMessage);
+router.get("/:matchId", protect, getMessages);
 
 export default router;

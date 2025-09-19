@@ -1,25 +1,42 @@
-import express from "express";
-import dotenv from "dotenv";
-import connectDB from "./config/db.js";
+import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
+import { useAuthContext } from "../context/AuthContext.jsx";
+import { fetchAPI } from "../utils/api.js";
+import PostCard from "../components/PostCard.jsx";
+import CreatePost from "../components/CreatePost.jsx";
 
-import authRoutes from "./routes/authRoutes.js";
-import userRoutes from "./routes/userRoutes.js";
+const socket = io("http://localhost:5000"); // adjust if backend runs elsewhere
 
-dotenv.config();
-const app = express();
+export default function Feed() {
+  const [posts, setPosts] = useState([]);
+  const { token } = useAuthContext();
 
-// Middleware
-app.use(express.json());
+  const getPosts = async () => {
+    const data = await fetchAPI("/posts", "GET", null, token);
+    setPosts(data);
+  };
 
-// Database
-connectDB();
+  useEffect(() => {
+    getPosts();
 
-// Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
+    socket.on("newPost", (post) => {
+      setPosts((prev) => [post, ...prev]);
+    });
 
-app.get("/", (req, res) => res.send("Dating App API is live 🚀"));
+    return () => {
+      socket.off("newPost");
+    };
+  }, []);
 
-// Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+  return (
+    <div>
+      <h1>Feed</h1>
+      <CreatePost refreshPosts={getPosts} socket={socket} />
+      {posts.length === 0 ? (
+        <p>No posts yet.</p>
+      ) : (
+        posts.map((post) => <PostCard key={post._id} post={post} />)
+      )}
+    </div>
+  );
+}
