@@ -1,29 +1,36 @@
-import Message from '../models/Message.js';
+import Message from "../models/Message.js";
+import User from "../models/User.js";
 
-export const createMessage = async (req, res) => {
+export const sendMessage = async (req, res) => {
   try {
-    const { matchId, senderId, text } = req.body;
-
+    const { receiverId, text } = req.body;
     const message = await Message.create({
-      match: matchId,
-      sender: senderId,
+      sender: req.user.id,
+      receiver: receiverId,
       text
     });
-
     res.status(201).json(message);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-export const getMessagesByMatch = async (req, res) => {
+export const getMessagesFromMatches = async (req, res) => {
   try {
-    const { matchId } = req.params;
-    const messages = await Message.find({ match: matchId })
-      .populate('sender', 'username email')
-      .sort('createdAt');
+    const currentUser = await User.findById(req.user.id).populate("matches");
+    const matchIds = currentUser.matches.map(match => match._id);
 
-    res.json(messages);
+    const messages = await Message.find({
+      $or: [
+        { sender: currentUser._id, receiver: { $in: matchIds } },
+        { receiver: currentUser._id, sender: { $in: matchIds } }
+      ]
+    })
+      .sort({ createdAt: -1 })
+      .populate("sender", "username profilePic")
+      .populate("receiver", "username profilePic");
+
+    res.status(200).json(messages);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

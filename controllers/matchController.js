@@ -1,24 +1,28 @@
-import Match from "../models/Match.js";
+import User from "../models/User";
+import Match from "../models/Match";
 
 export const createMatch = async (req, res) => {
   try {
-    const { userId } = req.body;
-    const users = [req.user._id, userId].sort(); // ensure consistent order for unique index
+    const { userId } = req.body; // user to match with
+    const currentUser = await User.findById(req.user.id);
 
-    const existingMatch = await Match.findOne({ users });
-    if (existingMatch) return res.status(400).json({ message: "Match already exists" });
+    if (!currentUser.matches.includes(userId)) {
+      currentUser.matches.push(userId);
+      await currentUser.save();
+    }
 
-    const match = await Match.create({ users });
-    res.status(201).json(match);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
+    const otherUser = await User.findById(userId);
+    if (!otherUser.matches.includes(currentUser._id)) {
+      otherUser.matches.push(currentUser._id);
+      await otherUser.save();
+    }
 
-export const getUserMatches = async (req, res) => {
-  try {
-    const matches = await Match.find({ users: req.user._id }).populate("users", "username email");
-    res.json(matches);
+    const matchExists = await Match.findOne({ users: { $all: [currentUser._id, userId] } });
+    if (!matchExists) {
+      await Match.create({ users: [currentUser._id, userId] });
+    }
+
+    res.status(200).json({ message: "Match created" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
