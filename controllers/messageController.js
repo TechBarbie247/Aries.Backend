@@ -1,31 +1,29 @@
+// backend/controllers/messageController.js
 import Message from "../models/Message.js";
 
-export const sendMessage = async (req, res) => {
+// Send a message
+export const createMessage = async (req, res) => {
+  const { matchId, text } = req.body;
   try {
-    const { matchId } = req.params;
-    const { text } = req.body;
-
     const message = await Message.create({
       match: matchId,
-      sender: req.user._id,
-      text
+      sender: req.user.id,
+      text,
     });
-
     res.status(201).json(message);
-  } catch (error) {
-    res.status(500).json({ message: "Error sending message", error });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
-export const getMessages = async (req, res) => {
+// Get messages by match
+export const getMessagesByMatch = async (req, res) => {
   try {
-    const { matchId } = req.params;
-    const messages = await Message.find({ match: matchId })
-      .populate("sender", "username")
-      .sort({ createdAt: 1 }); // oldest → newest
+    const messages = await Message.find({ match: req.params.matchId })
+      .populate("sender", "username profilePhoto")
+      .sort({ createdAt: 1 });
     res.json(messages);
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching messages", error });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
-
