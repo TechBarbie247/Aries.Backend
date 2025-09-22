@@ -1,5 +1,6 @@
 // backend/app.js
 import express from "express";
+import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 
@@ -12,6 +13,14 @@ dotenv.config();
 connectDB();
 
 const app = express();
+
+// ✅ CORS middleware
+app.use(cors({
+  origin: "http://localhost:5173", // your frontend URL
+  credentials: true,               // allow cookies / auth headers
+}));
+
+// ✅ JSON body parser
 app.use(express.json());
 
 // Routes
@@ -23,4 +32,3 @@ app.use("/api/messages", messageRoutes);
 app.get("/", (req, res) => res.send("Dating App API is live 🚀"));
 
 export default app;
-
